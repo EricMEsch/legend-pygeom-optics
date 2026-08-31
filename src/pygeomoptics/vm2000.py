@@ -76,8 +76,8 @@ def vm2000_parameters() -> tuple[Quantity, NDArray[np.float64], Quantity, Quanti
     """
     from pygeomoptics.pyg4utils import pyg4_scale_spectral_density
 
-    # Constants
-    wls_yield = 0.075  # 0.6 MaGe, 0.075 XENON paper
+    # 0.6 MaGe, test simulation shows best agreement with xenon paper
+    wls_yield = 0.55  # this converts to ~6% wls for ~33 um thick foil
 
     # Populate VM2000_energy_range array with energy values
     ppsci_high_e = (115 * u.nm).to("eV")
@@ -99,17 +99,15 @@ def vm2000_parameters() -> tuple[Quantity, NDArray[np.float64], Quantity, Quanti
         if vm2000_energy_range[ji] < (370 * u.nm).to(
             "eV"
         ):  # 370 nm < (related to energy)
-            vm2000_reflectivity[ji] = 0.95  # Visible light 0.95, 0.99
+            vm2000_reflectivity[ji] = 0.95  # Visible light 0.95
+            wls_absorption[ji] = 100.0 * u.m  # no WLS
         else:
-            vm2000_reflectivity[ji] = 0.12  # UV light 0.15, 0.3 (paper)
-
-        if vm2000_energy_range[ji] > 3.35 * u.eV:  # 5 eV 3.35
-            # depending on path length in foil --> angle
-            wls_absorption[ji] = vm2000_calculate_wls_mfp(wls_yield)  # Absorbs UV
-        else:
-            wls_absorption[ji] = (
-                1.0 * u.m
-            )  # Imperturbed, no absorption of visible light
+            vm2000_reflectivity[ji] = 0.12  # UV light 0.15
+            if vm2000_energy_range[ji] < (320 * u.nm).to("eV"):
+                wls_absorption[ji] = vm2000_calculate_wls_mfp(wls_yield)  # Absorbs UV
+            else:
+                # Xenon paper shows reduced wls ratio below 320 nm
+                wls_absorption[ji] = vm2000_calculate_wls_mfp(wls_yield) * 1.5
 
     g = InterpolatingGraph(*readdatafile("vm2000_em_spec.dat"), zero_outside=True)
 
